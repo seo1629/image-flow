@@ -10,10 +10,12 @@ import {
 } from '@xyflow/react';
 import { Download, Play, RotateCcw, Save } from 'lucide-react';
 import ImageAutoNode from './nodes/ImageAutoNode.jsx';
+import DeletableEdge from './edges/DeletableEdge.jsx';
 import { NODE_GROUPS } from './nodeConfig.js';
 import { useFlowStore } from './lib/store.js';
 
 const nodeTypes = { imageAutoNode: ImageAutoNode };
+const edgeTypes = { deletable: DeletableEdge };
 
 function NodePalette() {
   const onDragStart = (event, nodeType) => {
@@ -123,6 +125,7 @@ function FlowCanvas() {
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
@@ -130,6 +133,7 @@ function FlowCanvas() {
         onPaneClick={() => selectNode(null)}
         onDrop={onDrop}
         onDragOver={onDragOver}
+        deleteKeyCode={['Backspace', 'Delete']}
         fitView
       >
         <Background gap={24} size={1} color="#0f3a4a" />

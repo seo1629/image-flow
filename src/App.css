@@ -140,6 +140,36 @@ h1 { margin: 0; font-size: 22px; letter-spacing: -0.03em; }
 }
 .node-head strong { display: block; font-size: 14px; color: #fff; }
 .node-head small { display: block; margin-top: 2px; font-size: 11px; color: #94a3b8; }
+.node-head > div:nth-child(2) { flex: 1; min-width: 0; }
+.node-delete-btn {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #164e63;
+  border-radius: 8px;
+  background: #06283a;
+  color: #7dd3fc;
+  cursor: pointer;
+}
+.node-delete-btn:hover { border-color: #f87171; color: #f87171; background: rgba(248, 113, 113, 0.12); }
+
+.edge-delete-btn {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #164e63;
+  border-radius: 999px;
+  background: #061522;
+  color: #7dd3fc;
+  cursor: pointer;
+  pointer-events: all;
+  opacity: 0.55;
+}
+.edge-delete-btn:hover { opacity: 1; border-color: #f87171; color: #f87171; background: rgba(248, 113, 113, 0.16); }
 .node-body { padding: 12px; }
 .field { display: block; margin-bottom: 10px; }
 .field span, .property-card label { display: block; margin-bottom: 5px; font-size: 11px; color: #93c5fd; }

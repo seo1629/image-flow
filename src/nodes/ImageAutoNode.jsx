@@ -1,5 +1,5 @@
 import { Handle, Position } from '@xyflow/react';
-import { Image, Wand2, Crop, Combine, Expand, FileText, MonitorCheck } from 'lucide-react';
+import { Image, Wand2, Crop, Combine, Expand, FileText, MonitorCheck, X } from 'lucide-react';
 import { useFlowStore } from '../lib/store.js';
 
 const ICONS = {
@@ -23,6 +23,7 @@ function Field({ label, children }) {
 
 export default function ImageAutoNode({ id, data, selected }) {
   const updateNodeData = useFlowStore((state) => state.updateNodeData);
+  const deleteNode = useFlowStore((state) => state.deleteNode);
   const Icon = ICONS[data.nodeType] ?? Image;
   const hasInput = data.inputs?.length > 0;
   const hasOutput = data.outputs?.length > 0;
@@ -38,6 +39,17 @@ export default function ImageAutoNode({ id, data, selected }) {
           <strong>{data.title}</strong>
           <small>{data.nodeType}</small>
         </div>
+        <button
+          type="button"
+          className="node-delete-btn nodrag"
+          onClick={(event) => {
+            event.stopPropagation();
+            deleteNode(id);
+          }}
+          title="노드 삭제"
+        >
+          <X size={14} />
+        </button>
       </div>
 
       <div className="node-body">

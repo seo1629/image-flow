@@ -27,8 +27,8 @@ const initialNodes = [
 ];
 
 const initialEdges = [
-  { id: 'edge-1-2', source: 'image-1', target: 'imagine-2', animated: true, type: 'smoothstep' },
-  { id: 'edge-2-3', source: 'imagine-2', target: 'result-3', animated: true, type: 'smoothstep' }
+  { id: 'edge-1-2', source: 'image-1', target: 'imagine-2', animated: true, type: 'deletable' },
+  { id: 'edge-2-3', source: 'imagine-2', target: 'result-3', animated: true, type: 'deletable' }
 ];
 
 function executeNode(node, incomingOutputs) {
@@ -62,7 +62,7 @@ export const useFlowStore = create((set, get) => ({
   onNodesChange: (changes) => set({ nodes: applyNodeChanges(changes, get().nodes) }),
   onEdgesChange: (changes) => set({ edges: applyEdgeChanges(changes, get().edges) }),
   onConnect: (connection) => set({
-    edges: addEdge({ ...connection, animated: true, type: 'smoothstep' }, get().edges)
+    edges: addEdge({ ...connection, animated: true, type: 'deletable' }, get().edges)
   }),
 
   addNode: (type, position) => {
@@ -90,6 +90,16 @@ export const useFlowStore = create((set, get) => ({
   }),
 
   selectNode: (nodeId) => set({ selectedNodeId: nodeId }),
+
+  deleteNode: (nodeId) => set({
+    nodes: get().nodes.filter((node) => node.id !== nodeId),
+    edges: get().edges.filter((edge) => edge.source !== nodeId && edge.target !== nodeId),
+    selectedNodeId: get().selectedNodeId === nodeId ? null : get().selectedNodeId
+  }),
+
+  deleteEdge: (edgeId) => set({
+    edges: get().edges.filter((edge) => edge.id !== edgeId)
+  }),
 
   runFlow: () => {
     const { nodes, edges } = get();
