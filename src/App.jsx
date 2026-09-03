@@ -1,17 +1,18 @@
 import '@xyflow/react/dist/style.css';
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
-  ReactFlow, 
-  Background, 
-  Controls, 
-  MiniMap, 
-  ReactFlowProvider, 
-  useReactFlow 
+  ReactFlow,
+  Background,
+  Controls,
+  MiniMap,
+  ReactFlowProvider,
+  useReactFlow
 } from '@xyflow/react';
 import { Download, Play, RotateCcw, Save } from 'lucide-react';
 import ImageAutoNode from './nodes/ImageAutoNode.jsx';
 import DeletableEdge from './edges/DeletableEdge.jsx';
-import { NODE_GROUPS } from './nodeConfig.js';
+import FloatingPanel from './components/FloatingPanel.jsx';
+import { NODE_GROUPS, getNodeTemplate } from './nodeConfig.js';
 import { useFlowStore } from './lib/store.js';
 
 const nodeTypes = { imageAutoNode: ImageAutoNode };
@@ -24,8 +25,7 @@ function NodePalette() {
   };
 
   return (
-    <aside className="palette">
-      <div className="panel-title">Node Palette</div>
+    <div className="palette-body">
       {NODE_GROUPS.map((group) => (
         <section key={group.title} className="palette-group">
           <h3>{group.title}</h3>
@@ -45,7 +45,7 @@ function NodePalette() {
           ))}
         </section>
       ))}
-    </aside>
+    </div>
   );
 }
 
@@ -56,8 +56,7 @@ function PropertiesPanel() {
   const selected = nodes.find((node) => node.id === selectedNodeId);
 
   return (
-    <aside className="properties">
-      <div className="panel-title">Properties</div>
+    <div className="properties-body">
       {!selected ? (
         <p className="empty-text">노드를 선택하면 세부 속성이 표시됩니다.</p>
       ) : (
@@ -76,7 +75,30 @@ function PropertiesPanel() {
           </label>
         </div>
       )}
-    </aside>
+    </div>
+  );
+}
+
+function GuidePanel() {
+  const selectedNodeId = useFlowStore((state) => state.selectedNodeId);
+  const nodes = useFlowStore((state) => state.nodes);
+  const selected = nodes.find((node) => node.id === selectedNodeId);
+  const template = selected ? getNodeTemplate(selected.data.nodeType) : null;
+
+  return (
+    <div className="guide-body">
+      {!template ? (
+        <p className="empty-text">캔버스에서 노드를 선택하면 해당 기능에 대한 설명이 여기에 표시됩니다.</p>
+      ) : (
+        <div className="guide-card">
+          <div className="guide-head">
+            <span className="node-dot" style={{ background: template.color }} />
+            <strong>{template.label}</strong>
+          </div>
+          <p>{template.help || template.description}</p>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -84,15 +106,12 @@ function PreviewPanel() {
   const nodes = useFlowStore((state) => state.nodes);
   const result = [...nodes].reverse().find((node) => node.data.nodeType === 'result')?.data.output;
   return (
-    <section className="preview">
-      <div>
-        <span className="preview-label">Preview</span>
-        <strong>Image Auto Design Result</strong>
-      </div>
+    <div className="preview-body">
+      <strong>Image Auto Design Result</strong>
       <div className="preview-screen">
         {result || '아직 실행 결과가 없습니다. 노드를 연결한 뒤 Run Flow를 누르세요.'}
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -144,9 +163,36 @@ function FlowCanvas() {
   );
 }
 
+const PANEL_IDS = ['palette', 'properties', 'guide', 'preview'];
+const TOPBAR_HEIGHT = 78;
+const MARGIN = 18;
+
 function AppShell() {
   const runFlow = useFlowStore((state) => state.runFlow);
   const resetFlow = useFlowStore((state) => state.resetFlow);
+  const [panelOrder, setPanelOrder] = useState(PANEL_IDS);
+
+  const bringToFront = useCallback((id) => {
+    setPanelOrder((order) => (order[order.length - 1] === id ? order : [...order.filter((p) => p !== id), id]));
+  }, []);
+
+  const layout = useMemo(() => {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight - TOPBAR_HEIGHT;
+    const paletteSize = { width: 260, height: Math.min(0.6 * vh, 460) };
+    const propertiesSize = { width: 300, height: Math.min(0.5 * vh, 260) };
+    const guideSize = { width: 280, height: 200 };
+    const previewSize = { width: 420, height: 240 };
+    return {
+      palette: { position: { x: MARGIN, y: MARGIN }, size: paletteSize },
+      properties: { position: { x: vw - propertiesSize.width - MARGIN, y: MARGIN }, size: propertiesSize },
+      guide: {
+        position: { x: vw - previewSize.width - guideSize.width - MARGIN * 2, y: vh - guideSize.height - MARGIN },
+        size: guideSize
+      },
+      preview: { position: { x: vw - previewSize.width - MARGIN, y: vh - previewSize.height - MARGIN }, size: previewSize }
+    };
+  }, []);
 
   return (
     <div className="app">
@@ -163,11 +209,53 @@ function AppShell() {
         </div>
       </header>
       <div className="workspace">
-        <NodePalette />
         <FlowCanvas />
-        <PropertiesPanel />
+        <FloatingPanel
+          id="palette"
+          title="Node Palette"
+          className="panel-palette"
+          zIndex={10 + panelOrder.indexOf('palette')}
+          onFocus={bringToFront}
+          defaultPosition={layout.palette.position}
+          defaultSize={layout.palette.size}
+        >
+          <NodePalette />
+        </FloatingPanel>
+        <FloatingPanel
+          id="properties"
+          title="Properties"
+          className="panel-properties"
+          zIndex={10 + panelOrder.indexOf('properties')}
+          onFocus={bringToFront}
+          defaultPosition={layout.properties.position}
+          defaultSize={layout.properties.size}
+        >
+          <PropertiesPanel />
+        </FloatingPanel>
+        <FloatingPanel
+          id="guide"
+          title="기능 설명"
+          className="panel-guide"
+          zIndex={10 + panelOrder.indexOf('guide')}
+          onFocus={bringToFront}
+          defaultPosition={layout.guide.position}
+          defaultSize={layout.guide.size}
+          minSize={{ width: 220, height: 140 }}
+        >
+          <GuidePanel />
+        </FloatingPanel>
+        <FloatingPanel
+          id="preview"
+          title="Preview"
+          className="panel-preview"
+          zIndex={10 + panelOrder.indexOf('preview')}
+          onFocus={bringToFront}
+          defaultPosition={layout.preview.position}
+          defaultSize={layout.preview.size}
+        >
+          <PreviewPanel />
+        </FloatingPanel>
       </div>
-      <PreviewPanel />
     </div>
   );
 }

@@ -1,6 +1,14 @@
 import { Handle, Position } from '@xyflow/react';
 import { Image, Wand2, Crop, Combine, Expand, FileText, MonitorCheck, X } from 'lucide-react';
 import { useFlowStore } from '../lib/store.js';
+import { NANO_BANANA_ASPECT_RATIOS } from '../nodeConfig.js';
+
+function heightForRatio(width, ratio) {
+  if (!ratio || ratio === 'free') return null;
+  const [w, h] = ratio.split(':').map(Number);
+  if (!w || !h) return null;
+  return Math.round((width * h) / w);
+}
 
 const ICONS = {
   image: Image,
@@ -30,6 +38,23 @@ export default function ImageAutoNode({ id, data, selected }) {
 
   const update = (key, value) => updateNodeData(id, { [key]: value });
 
+  const handleImageUpload = (file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => update('imageUrl', reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const updateCropRatio = (ratio) => {
+    const height = heightForRatio(data.width ?? 512, ratio);
+    updateNodeData(id, height === null ? { ratio } : { ratio, height });
+  };
+
+  const updateCropWidth = (width) => {
+    const height = heightForRatio(width, data.ratio);
+    updateNodeData(id, height === null ? { width } : { width, height });
+  };
+
   return (
     <div className={`auto-node ${selected ? 'selected' : ''}`}>
       {hasInput && <Handle type="target" position={Position.Left} className="node-handle input" />}
@@ -54,9 +79,19 @@ export default function ImageAutoNode({ id, data, selected }) {
 
       <div className="node-body">
         {data.nodeType === 'image' && (
-          <Field label="Image URL">
-            <input value={data.imageUrl || ''} placeholder="/assets/source.png" onChange={(e) => update('imageUrl', e.target.value)} />
-          </Field>
+          <>
+            <Field label="Image URL">
+              <input value={data.imageUrl || ''} placeholder="/assets/source.png" onChange={(e) => update('imageUrl', e.target.value)} />
+            </Field>
+            <Field label="파일 업로드">
+              <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e.target.files?.[0])} />
+            </Field>
+            {data.imageUrl && (
+              <div className="image-preview">
+                <img src={data.imageUrl} alt={data.title || 'preview'} />
+              </div>
+            )}
+          </>
         )}
 
         {data.nodeType === 'designPrompt' && (
@@ -87,13 +122,35 @@ export default function ImageAutoNode({ id, data, selected }) {
         )}
 
         {data.nodeType === 'crop' && (
-          <div className="grid-two">
-            {['x', 'y', 'width', 'height'].map((key) => (
-              <Field key={key} label={key.toUpperCase()}>
-                <input type="number" value={data[key] ?? 0} onChange={(e) => update(key, Number(e.target.value))} />
+          <>
+            <Field label="Aspect Ratio">
+              <select value={data.ratio || 'free'} onChange={(e) => updateCropRatio(e.target.value)}>
+                <option value="free">Free</option>
+                {NANO_BANANA_ASPECT_RATIOS.map((ratio) => (
+                  <option key={ratio} value={ratio}>{ratio}</option>
+                ))}
+              </select>
+            </Field>
+            <div className="grid-two">
+              <Field label="X">
+                <input type="number" value={data.x ?? 0} onChange={(e) => update('x', Number(e.target.value))} />
               </Field>
-            ))}
-          </div>
+              <Field label="Y">
+                <input type="number" value={data.y ?? 0} onChange={(e) => update('y', Number(e.target.value))} />
+              </Field>
+              <Field label="WIDTH">
+                <input type="number" value={data.width ?? 0} onChange={(e) => updateCropWidth(Number(e.target.value))} />
+              </Field>
+              <Field label="HEIGHT">
+                <input
+                  type="number"
+                  value={data.height ?? 0}
+                  readOnly={Boolean(data.ratio) && data.ratio !== 'free'}
+                  onChange={(e) => update('height', Number(e.target.value))}
+                />
+              </Field>
+            </div>
+          </>
         )}
 
         {data.nodeType === 'merge' && (

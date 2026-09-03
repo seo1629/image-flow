@@ -36,13 +36,14 @@ function executeNode(node, incomingOutputs) {
   const inputText = incomingOutputs.filter(Boolean).join(' → ');
   switch (data.nodeType) {
     case 'image':
-      return data.imageUrl ? `IMAGE(${data.imageUrl})` : 'IMAGE(sample modular building source)';
+      if (!data.imageUrl) return 'IMAGE(sample modular building source)';
+      return data.imageUrl.startsWith('data:') ? 'IMAGE(uploaded file)' : `IMAGE(${data.imageUrl})`;
     case 'designPrompt':
       return `PROMPT(${data.program}, ${data.style})`;
     case 'imagine':
       return `GENERATED(${inputText || 'no image'} + prompt: ${data.prompt}, ratio: ${data.ratio})`;
     case 'crop':
-      return `CROP(${inputText}, x:${data.x}, y:${data.y}, w:${data.width}, h:${data.height})`;
+      return `CROP(${inputText}, ratio:${data.ratio || 'free'}, x:${data.x}, y:${data.y}, w:${data.width}, h:${data.height})`;
     case 'merge':
       return `MERGE(${inputText}, mode:${data.mode}, opacity:${data.opacity}%)`;
     case 'upscale':
