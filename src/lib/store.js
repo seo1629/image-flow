@@ -27,8 +27,8 @@ const initialNodes = [
 ];
 
 const initialEdges = [
-  { id: 'edge-1-2', source: 'image-1', target: 'imagine-2', animated: true, type: 'deletable' },
-  { id: 'edge-2-3', source: 'imagine-2', target: 'result-3', animated: true, type: 'deletable' }
+  { id: 'edge-1-2', source: 'image-1', target: 'imagine-2', type: 'deletable' },
+  { id: 'edge-2-3', source: 'imagine-2', target: 'result-3', type: 'deletable' }
 ];
 
 function executeNode(node, incomingOutputs) {
@@ -63,7 +63,7 @@ export const useFlowStore = create((set, get) => ({
   onNodesChange: (changes) => set({ nodes: applyNodeChanges(changes, get().nodes) }),
   onEdgesChange: (changes) => set({ edges: applyEdgeChanges(changes, get().edges) }),
   onConnect: (connection) => set({
-    edges: addEdge({ ...connection, animated: true, type: 'deletable' }, get().edges)
+    edges: addEdge({ ...connection, type: 'deletable' }, get().edges)
   }),
 
   addNode: (type, position) => {
