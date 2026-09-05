@@ -8,10 +8,11 @@ import {
   ReactFlowProvider,
   useReactFlow
 } from '@xyflow/react';
-import { Download, Play, RotateCcw, Save } from 'lucide-react';
+import { Download, Play, RotateCcw, Save, Settings as SettingsIcon, Eye, EyeOff, X } from 'lucide-react';
 import ImageAutoNode from './nodes/ImageAutoNode.jsx';
 import DeletableEdge from './edges/DeletableEdge.jsx';
 import FloatingPanel from './components/FloatingPanel.jsx';
+import VWorldMapModal from './components/VWorldMapModal.jsx';
 import { NODE_GROUPS, getNodeTemplate } from './nodeConfig.js';
 import { useFlowStore } from './lib/store.js';
 
@@ -163,6 +164,79 @@ function FlowCanvas() {
   );
 }
 
+function ApiKeyField({ label, value, onChange, placeholder }) {
+  const [reveal, setReveal] = useState(false);
+  return (
+    <label className="field">
+      <span>{label}</span>
+      <div className="api-key-row">
+        <input
+          type={reveal ? 'text' : 'password'}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          autoComplete="off"
+        />
+        <button
+          type="button"
+          className="api-key-toggle"
+          onClick={() => setReveal((r) => !r)}
+          title={reveal ? '값 숨기기' : '값 보기'}
+        >
+          {reveal ? <EyeOff size={14} /> : <Eye size={14} />}
+        </button>
+      </div>
+    </label>
+  );
+}
+
+function SettingsWidget() {
+  const apiKey = useFlowStore((state) => state.apiKey);
+  const setApiKey = useFlowStore((state) => state.setApiKey);
+  const vworldApiKey = useFlowStore((state) => state.vworldApiKey);
+  const setVworldApiKey = useFlowStore((state) => state.setVworldApiKey);
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="settings-widget">
+      {open && (
+        <div className="settings-card">
+          <div className="settings-card-head">
+            <span>Settings</span>
+            <button type="button" className="settings-close" onClick={() => setOpen(false)} title="닫기">
+              <X size={14} />
+            </button>
+          </div>
+          <div className="settings-card-body">
+            <ApiKeyField
+              label="Nano Banana API Key"
+              value={apiKey}
+              onChange={setApiKey}
+              placeholder="AIzaSy..."
+            />
+            <p className="settings-hint">
+              Imagine 노드의 이미지 합성은 Google AI Studio의 Nano Banana(Gemini 2.5 Flash Image) API를 사용합니다.
+            </p>
+            <ApiKeyField
+              label="VWorld API Key"
+              value={vworldApiKey}
+              onChange={setVworldApiKey}
+              placeholder="VWorld API Key"
+            />
+            <p className="settings-hint">
+              지도/3D 위치 데이터를 불러올 때 사용하는 VWorld Open API 키입니다.
+            </p>
+          </div>
+        </div>
+      )}
+      <button type="button" className="settings-toggle" onClick={() => setOpen((o) => !o)}>
+        <SettingsIcon size={16} />
+        Settings
+      </button>
+    </div>
+  );
+}
+
 const PANEL_IDS = ['palette', 'properties', 'guide', 'preview'];
 const TOPBAR_HEIGHT = 78;
 const MARGIN = 18;
@@ -255,6 +329,8 @@ function AppShell() {
         >
           <PreviewPanel />
         </FloatingPanel>
+        <SettingsWidget />
+        <VWorldMapModal />
       </div>
     </div>
   );

@@ -4,6 +4,36 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Image Auto Design Flow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Milonga&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <!--
+      VWorld's SDK uses document.write() internally to inject its actual
+      engine scripts, which only works during the browser's initial
+      synchronous HTML parse — it silently fails if injected dynamically
+      via JS after the page has already loaded. So the key (saved in
+      Settings, stored in localStorage) has to be read and written out here,
+      synchronously, before the parser moves past <head>. Changing the key
+      in Settings takes effect on the next page reload.
+    -->
+    <script>
+      (function () {
+        try {
+          var key = window.localStorage.getItem('image-flow-vworld-api-key');
+          if (key) {
+            document.write(
+              '<scr' + 'ipt src="https://map.vworld.kr/js/webglMapInit.js.do?version=3.0&apiKey=' +
+              encodeURIComponent(key) + '"></scr' + 'ipt>'
+            );
+          }
+        } catch (e) {
+          // localStorage unavailable — the VWorld node will show a "no key" message
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

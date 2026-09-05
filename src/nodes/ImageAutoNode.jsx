@@ -1,13 +1,18 @@
 import { Handle, Position } from '@xyflow/react';
-import { Image, Wand2, Crop, Combine, Expand, FileText, MonitorCheck, X } from 'lucide-react';
+import { Image, Wand2, Crop, Combine, Expand, FileText, MonitorCheck, X, Sparkles, Globe, Download } from 'lucide-react';
 import { useFlowStore } from '../lib/store.js';
-import { NANO_BANANA_ASPECT_RATIOS } from '../nodeConfig.js';
+import { NANO_BANANA_ASPECT_RATIOS, NANO_BANANA_RESOLUTIONS } from '../nodeConfig.js';
+import { downloadDataUrl } from '../lib/imageUtils.js';
 
 function heightForRatio(width, ratio) {
   if (!ratio || ratio === 'free') return null;
   const [w, h] = ratio.split(':').map(Number);
   if (!w || !h) return null;
   return Math.round((width * h) / w);
+}
+
+function formatHandleLabel(name) {
+  return name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
 }
 
 const ICONS = {
@@ -17,7 +22,8 @@ const ICONS = {
   merge: Combine,
   upscale: Expand,
   designPrompt: FileText,
-  result: MonitorCheck
+  result: MonitorCheck,
+  vworld: Globe
 };
 
 function Field({ label, children }) {
@@ -32,9 +38,22 @@ function Field({ label, children }) {
 export default function ImageAutoNode({ id, data, selected }) {
   const updateNodeData = useFlowStore((state) => state.updateNodeData);
   const deleteNode = useFlowStore((state) => state.deleteNode);
+  const generateImagine = useFlowStore((state) => state.generateImagine);
+  const openVWorldMap = useFlowStore((state) => state.openVWorldMap);
+  const edges = useFlowStore((state) => state.edges);
+  const nodes = useFlowStore((state) => state.nodes);
   const Icon = ICONS[data.nodeType] ?? Image;
   const hasInput = data.inputs?.length > 0;
   const hasOutput = data.outputs?.length > 0;
+
+  const connectionBadges = hasOutput
+    ? edges
+        .filter((edge) => edge.source === id && edge.targetHandle)
+        .map((edge) => {
+          const targetNode = nodes.find((n) => n.id === edge.target);
+          return `${targetNode?.data.title || edge.target} · ${formatHandleLabel(edge.targetHandle)}`;
+        })
+    : [];
 
   const update = (key, value) => updateNodeData(id, { [key]: value });
 
@@ -55,9 +74,29 @@ export default function ImageAutoNode({ id, data, selected }) {
     updateNodeData(id, height === null ? { width } : { width, height });
   };
 
+  const multiInput = hasInput && data.inputs.length > 1;
+
+  const inputPreviews = multiInput
+    ? data.inputs.reduce((acc, name) => {
+        const edge = edges.find((e) => e.target === id && e.targetHandle === name);
+        const sourceNode = edge ? nodes.find((n) => n.id === edge.source) : null;
+        acc[name] = sourceNode?.data.imageUrl || null;
+        return acc;
+      }, {})
+    : {};
+
   return (
     <div className={`auto-node ${selected ? 'selected' : ''}`}>
-      {hasInput && <Handle type="target" position={Position.Left} className="node-handle input" />}
+      {hasInput && data.inputs.map((name, index) => (
+        <Handle
+          key={name}
+          type="target"
+          position={Position.Left}
+          id={multiInput ? name : undefined}
+          className="node-handle input"
+          style={multiInput ? { top: `${((index + 1) / (data.inputs.length + 1)) * 100}%` } : undefined}
+        />
+      ))}
       <div className="node-head">
         <div className="node-icon"><Icon size={16} /></div>
         <div>
@@ -78,6 +117,30 @@ export default function ImageAutoNode({ id, data, selected }) {
       </div>
 
       <div className="node-body">
+        {connectionBadges.length > 0 && (
+          <div className="connection-badges">
+            {connectionBadges.map((label, index) => (
+              <span key={index} className="connection-badge">{label}</span>
+            ))}
+          </div>
+        )}
+
+        {multiInput && (
+          <div className="port-legend">
+            {data.inputs.map((name) => (
+              <div key={name} className="port-tag-row">
+                <span className="port-tag">
+                  <i className="port-dot" />
+                  {formatHandleLabel(name)}
+                </span>
+                {inputPreviews[name] && (
+                  <img className="port-thumb" src={inputPreviews[name]} alt={formatHandleLabel(name)} />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
         {data.nodeType === 'image' && (
           <>
             <Field label="Image URL">
@@ -90,6 +153,32 @@ export default function ImageAutoNode({ id, data, selected }) {
               <div className="image-preview">
                 <img src={data.imageUrl} alt={data.title || 'preview'} />
               </div>
+            )}
+          </>
+        )}
+
+        {data.nodeType === 'vworld' && (
+          <>
+            <button type="button" className="vworld-open-btn nodrag" onClick={() => openVWorldMap(id)}>
+              <Globe size={14} />
+              3D 지도 열기
+            </button>
+            {data.imageUrl ? (
+              <>
+                <div className="image-preview">
+                  <img src={data.imageUrl} alt="VWorld capture" />
+                </div>
+                <button
+                  type="button"
+                  className="vworld-download-btn nodrag"
+                  onClick={() => downloadDataUrl(data.imageUrl, `vworld-${id}.png`)}
+                >
+                  <Download size={14} />
+                  다운로드
+                </button>
+              </>
+            ) : (
+              <p className="empty-text">아직 캡처한 화면이 없습니다.</p>
             )}
           </>
         )}
@@ -110,14 +199,37 @@ export default function ImageAutoNode({ id, data, selected }) {
             <Field label="Prompt">
               <textarea value={data.prompt || ''} onChange={(e) => update('prompt', e.target.value)} />
             </Field>
-            <Field label="Ratio">
-              <select value={data.ratio || '16:9'} onChange={(e) => update('ratio', e.target.value)}>
-                <option>1:1</option>
-                <option>4:3</option>
-                <option>16:9</option>
-                <option>9:16</option>
-              </select>
-            </Field>
+            <div className="grid-two">
+              <Field label="Ratio">
+                <select value={data.ratio || '16:9'} onChange={(e) => update('ratio', e.target.value)}>
+                  {NANO_BANANA_ASPECT_RATIOS.map((ratio) => (
+                    <option key={ratio} value={ratio}>{ratio}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Resolution">
+                <select value={data.resolution || '1K'} onChange={(e) => update('resolution', e.target.value)}>
+                  {NANO_BANANA_RESOLUTIONS.map((resolution) => (
+                    <option key={resolution} value={resolution}>{resolution}</option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            <button
+              type="button"
+              className="generate-btn nodrag"
+              disabled={data.generating}
+              onClick={() => generateImagine(id)}
+            >
+              <Sparkles size={14} />
+              {data.generating ? '생성 중...' : 'Generate'}
+            </button>
+            {data.error && <p className="node-error">{data.error}</p>}
+            {data.generatedImage && (
+              <div className="generated-preview">
+                <img src={data.generatedImage} alt="Nano Banana 생성 결과" />
+              </div>
+            )}
           </>
         )}
 

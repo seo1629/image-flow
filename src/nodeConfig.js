@@ -1,3 +1,6 @@
+// Google AI Studio의 Nano Banana(Gemini 2.5 Flash Image)가 지원하는 출력 해상도
+export const NANO_BANANA_RESOLUTIONS = ['1K', '2K'];
+
 // Nano Banana(Gemini 2.5 Flash Image)가 지원하는 종횡비 프리셋
 export const NANO_BANANA_ASPECT_RATIOS = [
   '1:1',
@@ -34,14 +37,18 @@ export const NODE_GROUPS = [
         type: 'imagine',
         label: 'Imagine',
         description: '프롬프트 기반 이미지 생성',
-        help: '입력 이미지와 프롬프트를 바탕으로 지정한 비율의 새 이미지를 생성합니다.',
+        help: 'Base 이미지와 Reference 이미지를 각각 Image 노드에서 연결하고, 프롬프트와 함께 지정한 비율의 새 이미지를 생성합니다.',
         color: '#a78bfa',
         defaultData: {
           title: 'Imagine',
           prompt: 'modular housing facade, clean architectural render',
           ratio: '16:9',
+          resolution: '1K',
           output: null,
-          inputs: ['image'],
+          generatedImage: null,
+          generating: false,
+          error: null,
+          inputs: ['base', 'reference'],
           outputs: ['image']
         }
       },
@@ -89,6 +96,25 @@ export const NODE_GROUPS = [
           scale: 2,
           output: null,
           inputs: ['image'],
+          outputs: ['image']
+        }
+      }
+    ]
+  },
+  {
+    title: 'CONTEXT',
+    items: [
+      {
+        type: 'vworld',
+        label: 'VWorld',
+        description: '3D 지도 캡처',
+        help: 'VWorld 3D 지도를 열어 원하는 위치로 이동한 뒤 화면을 캡처해 파이프라인의 이미지 소스로 사용합니다.',
+        color: '#0ea5e9',
+        defaultData: {
+          title: 'VWorld',
+          imageUrl: null,
+          output: null,
+          inputs: [],
           outputs: ['image']
         }
       }
